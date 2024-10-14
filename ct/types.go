@@ -292,7 +292,7 @@ type SignedTreeHead struct {
 }
 
 func (sth *SignedTreeHead) TimestampTime() time.Time {
-	return time.Unix(int64(sth.Timestamp/1000), int64(sth.Timestamp%1000)*1_000_000).UTC()
+	return time.Unix(int64(sth.Timestamp/1000), int64(sth.Timestamp%1000)*1_000_000).UTC() //#nosec G115
 }
 
 // SignedCertificateTimestamp represents the structure returned by the
