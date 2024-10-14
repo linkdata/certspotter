@@ -34,7 +34,7 @@ func NewSignatureVerifier(pk crypto.PublicKey) (*SignatureVerifier, error) {
 	case *rsa.PublicKey:
 	case *ecdsa.PublicKey:
 	default:
-		return nil, fmt.Errorf("Unsupported public key type %v", pkType)
+		return nil, fmt.Errorf("unsupported public key type %v", pkType)
 	}
 
 	return &SignatureVerifier{
@@ -78,7 +78,7 @@ func (s SignatureVerifier) verifySignature(data []byte, sig DigitallySigned) err
 			return fmt.Errorf("failed to unmarshal ECDSA signature: %v", err)
 		}
 		if len(rest) != 0 {
-			return fmt.Errorf("Garbage following signature %v", rest)
+			return fmt.Errorf("garbage following signature %v", rest)
 		}
 
 		if !ecdsa.Verify(ecdsaKey, hash, ecdsaSig.R, ecdsaSig.S) {
