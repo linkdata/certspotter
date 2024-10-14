@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	insecurerand "math/rand/v2"
 	"net/http"
 	"net/url"
@@ -41,10 +42,10 @@ func getRetryAfter(resp *http.Response) (time.Duration, bool) {
 		return 0, false
 	}
 	seconds, err := strconv.ParseUint(resp.Header.Get("Retry-After"), 10, 16)
-	if err != nil {
+	if err != nil || seconds > math.MaxInt64 {
 		return 0, false
 	}
-	return time.Duration(seconds) * time.Second, true
+	return time.Duration(seconds) * time.Second, true //#nosec G115
 }
 
 func sleep(ctx context.Context, duration time.Duration) {
