@@ -315,6 +315,10 @@ func (s SignedCertificateTimestamp) String() string {
 		s.Signature)
 }
 
+func (s SignedCertificateTimestamp) UnixTime() time.Time {
+	return time.Unix(int64(s.Timestamp)/1000, int64(s.Timestamp%1000)*1000000) //#nosec G115
+}
+
 // TimestampedEntry is part of the MerkleTreeLeaf structure.
 // See RFC section 3.4
 type TimestampedEntry struct {
