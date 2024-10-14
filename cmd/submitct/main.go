@@ -128,7 +128,7 @@ func (ctlog *Log) SubmitChain(chain Chain) (*ct.SignedCertificateTimestamp, erro
 	}
 
 	if err := certspotter.VerifyX509SCT(sct, rawCerts[0], ctlog.SignatureVerifier); err != nil {
-		return nil, fmt.Errorf("Bad SCT signature: %s", err)
+		return nil, fmt.Errorf("bad SCT signature: %s", err)
 	}
 	return sct, nil
 }
