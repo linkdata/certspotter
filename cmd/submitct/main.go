@@ -215,8 +215,7 @@ func main() {
 					log.Printf("%x (%s): %s: Submission Error: %s", fingerprint, cn, ctlog.URL, err)
 					atomic.AddUint32(&submitErrors, 1)
 				} else if *verbose {
-					timestamp := time.Unix(int64(sct.Timestamp)/1000, int64(sct.Timestamp%1000)*1000000)
-					log.Printf("%x (%s): %s: Submitted at %s", fingerprint, cn, ctlog.URL, timestamp)
+					log.Printf("%x (%s): %s: Submitted at %s", fingerprint, cn, ctlog.URL, sct.TimestampTime())
 				}
 				wg.Done()
 			}(fingerprint, ctlog)
