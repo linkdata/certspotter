@@ -1,6 +1,6 @@
 module software.sslmate.com/src/certspotter
 
-go 1.21
+go 1.23
 
 require (
 	golang.org/x/net v0.17.0
