@@ -28,7 +28,7 @@ const (
 func writeUint(w io.Writer, value uint64, numBytes int) error {
 	buf := make([]uint8, numBytes)
 	for i := 0; i < numBytes; i++ {
-		buf[numBytes-i-1] = uint8(value & 0xff)
+		buf[numBytes-i-1] = uint8(value & 0xff) //#nosec G115
 		value >>= 8
 	}
 	if value != 0 {
