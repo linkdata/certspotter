@@ -13,11 +13,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"golang.org/x/sync/errgroup"
 	"log"
-	insecurerand "math/rand"
-	"software.sslmate.com/src/certspotter/loglist"
+	insecurerand "math/rand/v2"
 	"time"
+
+	"golang.org/x/sync/errgroup"
+	"software.sslmate.com/src/certspotter/loglist"
 )
 
 const (
@@ -26,7 +27,7 @@ const (
 )
 
 func randomDuration(min, max time.Duration) time.Duration {
-	return min + time.Duration(insecurerand.Int63n(int64(max-min+1)))
+	return min + time.Duration(insecurerand.Int64N(int64(max-min+1)))
 }
 
 func reloadLogListInterval() time.Duration {
