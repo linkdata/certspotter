@@ -148,7 +148,7 @@ func NewWithVerifier(uri string, verifier *ct.SignatureVerifier) *LogClient {
 			// TLS certificate validation is not actually necessary.  (We don't want to ship
 			// our own trust store because that adds undesired complexity and would require
 			// updating should a log ever change to a different CA.)
-			InsecureSkipVerify: true,
+			InsecureSkipVerify: true, //#nosec G402
 		},
 	}
 	c.httpClient = &http.Client{Timeout: 60 * time.Second, Transport: transport}
