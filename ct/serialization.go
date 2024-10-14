@@ -145,7 +145,7 @@ func ReadTimestampedEntryInto(r io.Reader, t *TimestampedEntry) error {
 		return fmt.Errorf("unknown EntryType: %d", t.EntryType)
 	}
 	t.Extensions, err = readVarBytes(r, ExtensionsLengthBytes)
-	return nil
+	return err
 }
 
 // ReadMerkleTreeLeaf parses the byte-stream representation of a MerkleTreeLeaf
