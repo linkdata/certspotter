@@ -324,7 +324,7 @@ func serializeV1SCTSignatureInput(sct SignedCertificateTimestamp, entry LogEntry
 		return nil, fmt.Errorf("unsupported SCT version, expected V1, but got %s", sct.SCTVersion)
 	}
 	if entry.Leaf.LeafType != TimestampedEntryLeafType {
-		return nil, fmt.Errorf("Unsupported leaf type %s", entry.Leaf.LeafType)
+		return nil, fmt.Errorf("unsupported leaf type %s", entry.Leaf.LeafType)
 	}
 	switch entry.Leaf.TimestampedEntry.EntryType {
 	case X509LogEntryType:
