@@ -27,7 +27,7 @@ const (
 )
 
 func randomDuration(min, max time.Duration) time.Duration {
-	return min + time.Duration(insecurerand.Int64N(int64(max-min+1)))
+	return min + time.Duration(insecurerand.Int64N(int64(max-min+1))) //#nosec G404
 }
 
 func reloadLogListInterval() time.Duration {
