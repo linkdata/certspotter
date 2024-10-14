@@ -37,9 +37,9 @@ var verbose = flag.Bool("v", false, "Enable verbose output")
 var logsURL = flag.String("logs", defaultLogList, "File path or URL of JSON list of logs to submit to")
 
 type Certificate struct {
-	Subject []byte
-	Issuer  []byte
-	Raw     []byte
+	Subject    []byte
+	Issuer     []byte
+	Raw        []byte
 	Expiration time.Time
 }
 
@@ -76,9 +76,9 @@ func parseCertificate(data []byte) (*Certificate, error) {
 	}
 
 	return &Certificate{
-		Subject: tbs.Subject.FullBytes,
-		Issuer:  tbs.Issuer.FullBytes,
-		Raw:     data,
+		Subject:    tbs.Subject.FullBytes,
+		Issuer:     tbs.Issuer.FullBytes,
+		Raw:        data,
 		Expiration: validity.NotAfter,
 	}, nil
 }
@@ -167,9 +167,9 @@ func main() {
 			log.Fatalf("%s: Failed to create signature verifier for log: %s", ctlog.URL, err)
 		}
 		logs = append(logs, Log{
-			Log: ctlog,
+			Log:               ctlog,
 			SignatureVerifier: verifier,
-			LogClient: client.New(strings.TrimRight(ctlog.URL, "/")),
+			LogClient:         client.New(strings.TrimRight(ctlog.URL, "/")),
 		})
 	}
 

@@ -35,10 +35,10 @@ func VerifyPrecertSCT(sct *ct.SignedCertificateTimestamp, precert ct.PreCert, ve
 			Version:  0,
 			LeafType: ct.TimestampedEntryLeafType,
 			TimestampedEntry: ct.TimestampedEntry{
-				Timestamp:  sct.Timestamp,
-				EntryType:  ct.PrecertLogEntryType,
-				PrecertEntry:  precert,
-				Extensions: sct.Extensions,
+				Timestamp:    sct.Timestamp,
+				EntryType:    ct.PrecertLogEntryType,
+				PrecertEntry: precert,
+				Extensions:   sct.Extensions,
 			},
 		},
 	}

@@ -18,7 +18,8 @@ const (
 ///////////////////////////////////////////////////////////////////////////////
 
 // LogEntryType represents the LogEntryType enum from section 3.1 of the RFC:
-//   enum { x509_entry(0), precert_entry(1), (65535) } LogEntryType;
+//
+//	enum { x509_entry(0), precert_entry(1), (65535) } LogEntryType;
 type LogEntryType uint16
 
 func (e LogEntryType) String() string {
@@ -298,12 +299,12 @@ func (sth *SignedTreeHead) TimestampTime() time.Time {
 // add-chain and add-pre-chain methods after base64 decoding. (see RFC sections
 // 3.2 ,4.1 and 4.2)
 type SignedCertificateTimestamp struct {
-	SCTVersion Version          `json:"sct_version"`    // The version of the protocol to which the SCT conforms
-	LogID      SHA256Hash       `json:"id"` // the SHA-256 hash of the log's public key, calculated over
+	SCTVersion Version    `json:"sct_version"` // The version of the protocol to which the SCT conforms
+	LogID      SHA256Hash `json:"id"`          // the SHA-256 hash of the log's public key, calculated over
 	// the DER encoding of the key represented as SubjectPublicKeyInfo.
-	Timestamp  uint64           `json:"timestamp"`          // Timestamp (in ms since unix epoch) at which the SCT was issued
-	Extensions CTExtensions     `json:"extensions"`    // For future extensions to the protocol
-	Signature  DigitallySigned  `json:"signature"` // The Log's signature for this SCT
+	Timestamp  uint64          `json:"timestamp"`  // Timestamp (in ms since unix epoch) at which the SCT was issued
+	Extensions CTExtensions    `json:"extensions"` // For future extensions to the protocol
+	Signature  DigitallySigned `json:"signature"`  // The Log's signature for this SCT
 }
 
 func (s SignedCertificateTimestamp) String() string {
