@@ -315,7 +315,7 @@ func (s SignedCertificateTimestamp) String() string {
 		s.Signature)
 }
 
-func (s SignedCertificateTimestamp) UnixTime() time.Time {
+func (s SignedCertificateTimestamp) TimestampTime() time.Time {
 	return time.Unix(int64(s.Timestamp)/1000, int64(s.Timestamp%1000)*1000000) //#nosec G115
 }
 
