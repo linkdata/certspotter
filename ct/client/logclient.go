@@ -327,7 +327,7 @@ func (c *LogClient) GetEntries(ctx context.Context, start, end int64) ([]ct.LogE
 	for index, entry := range resp.Entries {
 		leaf, err := ct.ReadMerkleTreeLeaf(bytes.NewBuffer(entry.LeafInput))
 		if err != nil {
-			return nil, fmt.Errorf("Reading Merkle Tree Leaf at index %d failed: %s", start+int64(index), err)
+			return nil, fmt.Errorf("reading Merkle Tree Leaf at index %d failed: %s", start+int64(index), err)
 		}
 		entries[index].LeafBytes = entry.LeafInput
 		entries[index].Leaf = *leaf
@@ -341,10 +341,10 @@ func (c *LogClient) GetEntries(ctx context.Context, start, end int64) ([]ct.LogE
 			chain, err = ct.UnmarshalPrecertChainArray(entry.ExtraData)
 
 		default:
-			return nil, fmt.Errorf("Unknown entry type at index %d: %v", start+int64(index), leaf.TimestampedEntry.EntryType)
+			return nil, fmt.Errorf("unknown entry type at index %d: %v", start+int64(index), leaf.TimestampedEntry.EntryType)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("Parsing entry of type %d at index %d failed: %s", leaf.TimestampedEntry.EntryType, start+int64(index), err)
+			return nil, fmt.Errorf("parsing entry of type %d at index %d failed: %s", leaf.TimestampedEntry.EntryType, start+int64(index), err)
 		}
 		entries[index].Chain = chain
 		entries[index].Index = start + int64(index)
