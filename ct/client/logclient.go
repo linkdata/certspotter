@@ -13,7 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	insecurerand "math/rand"
+	insecurerand "math/rand/v2"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -33,7 +33,7 @@ func isRetryableStatusCode(code int) bool {
 }
 
 func randomDuration(min, max time.Duration) time.Duration {
-	return min + time.Duration(insecurerand.Int63n(int64(max)-int64(min)+1))
+	return min + time.Duration(insecurerand.Int64N(int64(max)-int64(min)+1)) //#nosec G404
 }
 
 func getRetryAfter(resp *http.Response) (time.Duration, bool) {
@@ -67,8 +67,8 @@ const (
 
 // LogClient represents a client for a given CT Log instance
 type LogClient struct {
-	uri        string       // the base URI of the log. e.g. http://ct.googleapis/pilot
-	httpClient *http.Client // used to interact with the log via HTTP
+	uri        string                // the base URI of the log. e.g. http://ct.googleapis/pilot
+	httpClient *http.Client          // used to interact with the log via HTTP
 	verifier   *ct.SignatureVerifier // if non-nil, used to verify STH signatures
 }
 
