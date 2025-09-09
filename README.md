@@ -1,3 +1,5 @@
+[![coverage](https://github.com/linkdata/certspotter/blob/coverage/main/badge.svg)](https://htmlpreview.github.io/?https://github.com/linkdata/certspotter/blob/coverage/main/report.html)
+
 # Cert Spotter - Certificate Transparency Monitor
 
 **Cert Spotter** is a Certificate Transparency log monitor from SSLMate that

@@ -1,0 +1,47 @@
+name: Build
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go:
+          - "stable"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Go generate
+        run: go generate ./...
+
+      - name: Test
+        run: go test -tags debug -bench=. -coverprofile=coverage.out .
+
+      - name: Build
+        run: go build .
+
+      - name: Coverage
+        id: coverage
+        run: |
+          echo "COVERAGE=$(go tool cover -func=coverage.out | tail -n 1 | tr -s '\t' | cut -f 3)" >> $GITHUB_OUTPUT
+          go tool cover -html=coverage.out -o=coveragereport.out
+
+      - name: Publish coverage badge (and optional report)
+        uses: linkdata/gitcoverage@main
+        with:
+          coverage: ${{ steps.coverage.outputs.coverage }}
+          report:   "coveragereport.out"
