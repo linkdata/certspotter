@@ -1,4 +1,4 @@
-[![coverage](https://github.com/linkdata/certspotter/blob/coverage/main/badge.svg)](https://htmlpreview.github.io/?https://github.com/linkdata/certspotter/blob/coverage/main/report.html)
+[![coverage](https://github.com/linkdata/certspotter/blob/coverage/master/badge.svg)](https://htmlpreview.github.io/?https://github.com/linkdata/certspotter/blob/coverage/master/report.html)
 
 # Cert Spotter - Certificate Transparency Monitor
 
