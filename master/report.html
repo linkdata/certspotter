@@ -1,0 +1,1581 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>certspotter: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">software.sslmate.com/src/certspotter/asn1.go (0.0%)</option>
+				
+				<option value="file1">software.sslmate.com/src/certspotter/asn1time.go (78.4%)</option>
+				
+				<option value="file2">software.sslmate.com/src/certspotter/canonicalize.go (38.5%)</option>
+				
+				<option value="file3">software.sslmate.com/src/certspotter/helpers.go (31.2%)</option>
+				
+				<option value="file4">software.sslmate.com/src/certspotter/identifiers.go (0.0%)</option>
+				
+				<option value="file5">software.sslmate.com/src/certspotter/precerts.go (0.0%)</option>
+				
+				<option value="file6">software.sslmate.com/src/certspotter/sct.go (0.0%)</option>
+				
+				<option value="file7">software.sslmate.com/src/certspotter/x509.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Copyright (C) 2016 Opsmate, Inc.
+//
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// This software is distributed WITHOUT A WARRANTY OF ANY KIND.
+// See the Mozilla Public License for details.
+
+package certspotter
+
+import (
+        "bytes"
+        "encoding/asn1"
+        "encoding/binary"
+        "errors"
+        "unicode/utf8"
+)
+
+func stringFromByteSlice(chars []byte) string <span class="cov0" title="0">{
+        runes := make([]rune, len(chars))
+        for i, ch := range chars </span><span class="cov0" title="0">{
+                runes[i] = rune(ch)
+        }</span>
+        <span class="cov0" title="0">return string(runes)</span>
+}
+
+func stringFromUint16Slice(chars []uint16) string <span class="cov0" title="0">{
+        runes := make([]rune, len(chars))
+        for i, ch := range chars </span><span class="cov0" title="0">{
+                runes[i] = rune(ch)
+        }</span>
+        <span class="cov0" title="0">return string(runes)</span>
+}
+
+func stringFromUint32Slice(chars []uint32) string <span class="cov0" title="0">{
+        runes := make([]rune, len(chars))
+        for i, ch := range chars </span><span class="cov0" title="0">{
+                runes[i] = rune(ch)
+        }</span>
+        <span class="cov0" title="0">return string(runes)</span>
+}
+
+func decodeASN1String(value *asn1.RawValue) (string, error) <span class="cov0" title="0">{
+        if !value.IsCompound &amp;&amp; value.Class == 0 </span><span class="cov0" title="0">{
+                if value.Tag == 12 </span><span class="cov0" title="0">{
+                        // UTF8String
+                        if !utf8.Valid(value.Bytes) </span><span class="cov0" title="0">{
+                                return "", errors.New("Malformed UTF8String")
+                        }</span>
+                        <span class="cov0" title="0">return string(value.Bytes), nil</span>
+                } else<span class="cov0" title="0"> if value.Tag == 19 || value.Tag == 22 || value.Tag == 20 || value.Tag == 26 </span><span class="cov0" title="0">{
+                        // * PrintableString - subset of ASCII
+                        // * IA5String - ASCII
+                        // * TeletexString - 8 bit charset; not quite ISO-8859-1, but often treated as such
+                        // * VisibleString - subset of ASCII
+
+                        // Don't enforce character set rules. Allow any 8 bit character, since
+                        // CAs routinely mess this up
+                        return stringFromByteSlice(value.Bytes), nil
+                }</span> else<span class="cov0" title="0"> if value.Tag == 30 </span><span class="cov0" title="0">{
+                        // BMPString - Unicode, encoded in big-endian format using two octets
+                        runes := make([]uint16, len(value.Bytes)/2)
+                        if err := binary.Read(bytes.NewReader(value.Bytes), binary.BigEndian, runes); err != nil </span><span class="cov0" title="0">{
+                                return "", errors.New("Malformed BMPString: " + err.Error())
+                        }</span>
+                        <span class="cov0" title="0">return stringFromUint16Slice(runes), nil</span>
+                } else<span class="cov0" title="0"> if value.Tag == 28 </span><span class="cov0" title="0">{
+                        // UniversalString - Unicode, encoded in big-endian format using four octets
+                        runes := make([]uint32, len(value.Bytes)/4)
+                        if err := binary.Read(bytes.NewReader(value.Bytes), binary.BigEndian, runes); err != nil </span><span class="cov0" title="0">{
+                                return "", errors.New("Malformed UniversalString: " + err.Error())
+                        }</span>
+                        <span class="cov0" title="0">return stringFromUint32Slice(runes), nil</span>
+                }
+        }
+        <span class="cov0" title="0">return "", errors.New("Not a string")</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Copyright (C) 2016 Opsmate, Inc.
+//
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// This software is distributed WITHOUT A WARRANTY OF ANY KIND.
+// See the Mozilla Public License for details.
+
+package certspotter
+
+import (
+        "encoding/asn1"
+        "errors"
+        "strconv"
+        "time"
+        "unicode"
+)
+
+const (
+        tagUTCTime         = 23
+        tagGeneralizedTime = 24
+)
+
+func isDigit(b byte) bool <span class="cov8" title="1">{
+        return unicode.IsDigit(rune(b))
+}</span>
+
+func bytesToInt(bytes []byte) (int, error) <span class="cov8" title="1">{
+        return strconv.Atoi(string(bytes))
+}</span>
+
+func parseUTCTime(bytes []byte) (time.Time, error) <span class="cov8" title="1">{
+        var err error
+        var year, month, day int
+        var hour, min, sec int
+        var tz *time.Location
+
+        // YYMMDDhhmm
+        if len(bytes) &lt; 10 </span><span class="cov8" title="1">{
+                return time.Time{}, errors.New("UTCTime is too short")
+        }</span>
+        <span class="cov8" title="1">year, err = bytesToInt(bytes[0:2])
+        if err != nil </span><span class="cov0" title="0">{
+                return time.Time{}, errors.New("UTCTime contains invalid integer: " + err.Error())
+        }</span>
+
+        <span class="cov8" title="1">month, err = bytesToInt(bytes[2:4])
+        if err != nil </span><span class="cov0" title="0">{
+                return time.Time{}, errors.New("UTCTime contains invalid integer: " + err.Error())
+        }</span>
+
+        <span class="cov8" title="1">day, err = bytesToInt(bytes[4:6])
+        if err != nil </span><span class="cov0" title="0">{
+                return time.Time{}, errors.New("UTCTime contains invalid integer: " + err.Error())
+        }</span>
+
+        <span class="cov8" title="1">hour, err = bytesToInt(bytes[6:8])
+        if err != nil </span><span class="cov0" title="0">{
+                return time.Time{}, errors.New("UTCTime contains invalid integer: " + err.Error())
+        }</span>
+
+        <span class="cov8" title="1">min, err = bytesToInt(bytes[8:10])
+        if err != nil </span><span class="cov0" title="0">{
+                return time.Time{}, errors.New("UTCTime contains invalid integer: " + err.Error())
+        }</span>
+
+        <span class="cov8" title="1">bytes = bytes[10:]
+
+        // (optional) ss
+        if len(bytes) &gt;= 2 &amp;&amp; isDigit(bytes[0]) </span><span class="cov8" title="1">{
+                sec, err = bytesToInt(bytes[0:2])
+                if err != nil </span><span class="cov0" title="0">{
+                        return time.Time{}, errors.New("UTCTime contains invalid integer: " + err.Error())
+                }</span>
+                <span class="cov8" title="1">bytes = bytes[2:]</span>
+        }
+
+        // timezone (required but allow it to be omitted, since this is a common error)
+        <span class="cov8" title="1">if len(bytes) &gt;= 1 </span><span class="cov8" title="1">{
+                if bytes[0] == 'Z' </span><span class="cov8" title="1">{
+                        tz = time.UTC
+                        bytes = bytes[1:]
+                }</span> else<span class="cov8" title="1"> if bytes[0] == '+' </span><span class="cov8" title="1">{
+                        // +hhmm
+                        if len(bytes) &lt; 5 </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("UTCTime positive timezone offset is too short")
+                        }</span>
+                        <span class="cov8" title="1">tzHour, err := bytesToInt(bytes[1:3])
+                        if err != nil </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("UTCTime contains invalid integer: " + err.Error())
+                        }</span>
+
+                        <span class="cov8" title="1">tzMin, err := bytesToInt(bytes[3:5])
+                        if err != nil </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("UTCTime contains invalid integer: " + err.Error())
+                        }</span>
+
+                        <span class="cov8" title="1">tz = time.FixedZone("", tzHour*3600+tzMin*60)
+                        bytes = bytes[5:]</span>
+                } else<span class="cov8" title="1"> if bytes[0] == '-' </span><span class="cov8" title="1">{
+                        // -hhmm
+                        if len(bytes) &lt; 5 </span><span class="cov8" title="1">{
+                                return time.Time{}, errors.New("UTCTime negative timezone offset is too short")
+                        }</span>
+                        <span class="cov8" title="1">tzHour, err := bytesToInt(bytes[1:3])
+                        if err != nil </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("UTCTime contains invalid integer: " + err.Error())
+                        }</span>
+
+                        <span class="cov8" title="1">tzMin, err := bytesToInt(bytes[3:5])
+                        if err != nil </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("UTCTime contains invalid integer: " + err.Error())
+                        }</span>
+
+                        <span class="cov8" title="1">tz = time.FixedZone("", -1*(tzHour*3600+tzMin*60))
+                        bytes = bytes[5:]</span>
+                }
+        } else<span class="cov8" title="1"> {
+                tz = time.UTC
+        }</span>
+
+        <span class="cov8" title="1">if len(bytes) &gt; 0 </span><span class="cov8" title="1">{
+                return time.Time{}, errors.New("UTCTime has trailing garbage")
+        }</span>
+
+        // https://tools.ietf.org/html/rfc5280#section-4.1.2.5.1
+        <span class="cov8" title="1">if year &gt;= 50 </span><span class="cov8" title="1">{
+                year = 1900 + year
+        }</span> else<span class="cov8" title="1"> {
+                year = 2000 + year
+        }</span>
+
+        <span class="cov8" title="1">return time.Date(year, time.Month(month), day, hour, min, sec, 0, tz), nil</span>
+}
+
+func parseGeneralizedTime(bytes []byte) (time.Time, error) <span class="cov8" title="1">{
+        var err error
+        var year, month, day int
+        var hour, min, sec, ms int
+        var tz *time.Location
+
+        // YYYYMMDDHH
+        if len(bytes) &lt; 10 </span><span class="cov8" title="1">{
+                return time.Time{}, errors.New("GeneralizedTime is too short")
+        }</span>
+        <span class="cov8" title="1">year, err = bytesToInt(bytes[0:4])
+        if err != nil </span><span class="cov0" title="0">{
+                return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+        }</span>
+
+        <span class="cov8" title="1">month, err = bytesToInt(bytes[4:6])
+        if err != nil </span><span class="cov0" title="0">{
+                return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+        }</span>
+
+        <span class="cov8" title="1">day, err = bytesToInt(bytes[6:8])
+        if err != nil </span><span class="cov0" title="0">{
+                return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+        }</span>
+
+        <span class="cov8" title="1">hour, err = bytesToInt(bytes[8:10])
+        if err != nil </span><span class="cov0" title="0">{
+                return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+        }</span>
+
+        <span class="cov8" title="1">bytes = bytes[10:]
+
+        // (optional) MM
+        if len(bytes) &gt;= 2 &amp;&amp; isDigit(bytes[0]) </span><span class="cov8" title="1">{
+                min, err = bytesToInt(bytes[0:2])
+                if err != nil </span><span class="cov0" title="0">{
+                        return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+                }</span>
+                <span class="cov8" title="1">bytes = bytes[2:]
+                // (optional) SS
+                if len(bytes) &gt;= 2 &amp;&amp; isDigit(bytes[0]) </span><span class="cov8" title="1">{
+                        sec, err = bytesToInt(bytes[0:2])
+                        if err != nil </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+                        }</span>
+                        <span class="cov8" title="1">bytes = bytes[2:]
+                        // (optional) .fff
+                        if len(bytes) &gt;= 1 &amp;&amp; bytes[0] == '.' </span><span class="cov8" title="1">{
+                                if len(bytes) &lt; 4 </span><span class="cov8" title="1">{
+                                        return time.Time{}, errors.New("GeneralizedTime fractional seconds is too short")
+                                }</span>
+                                <span class="cov8" title="1">ms, err = bytesToInt(bytes[1:4])
+                                if err != nil </span><span class="cov8" title="1">{
+                                        return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+                                }</span>
+                                <span class="cov8" title="1">bytes = bytes[4:]</span>
+                        }
+                }
+        }
+
+        // timezone (Z or +hhmm or -hhmm or nothing)
+        <span class="cov8" title="1">if len(bytes) &gt;= 1 </span><span class="cov8" title="1">{
+                if bytes[0] == 'Z' </span><span class="cov8" title="1">{
+                        bytes = bytes[1:]
+                        tz = time.UTC
+                }</span> else<span class="cov8" title="1"> if bytes[0] == '+' </span><span class="cov8" title="1">{
+                        // +hhmm
+                        if len(bytes) &lt; 5 </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("GeneralizedTime positive timezone offset is too short")
+                        }</span>
+                        <span class="cov8" title="1">tzHour, err := bytesToInt(bytes[1:3])
+                        if err != nil </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+                        }</span>
+
+                        <span class="cov8" title="1">tzMin, err := bytesToInt(bytes[3:5])
+                        if err != nil </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+                        }</span>
+
+                        <span class="cov8" title="1">tz = time.FixedZone("", tzHour*3600+tzMin*60)
+                        bytes = bytes[5:]</span>
+                } else<span class="cov8" title="1"> if bytes[0] == '-' </span><span class="cov8" title="1">{
+                        // -hhmm
+                        if len(bytes) &lt; 5 </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("GeneralizedTime negative timezone offset is too short")
+                        }</span>
+                        <span class="cov8" title="1">tzHour, err := bytesToInt(bytes[1:3])
+                        if err != nil </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+                        }</span>
+
+                        <span class="cov8" title="1">tzMin, err := bytesToInt(bytes[3:5])
+                        if err != nil </span><span class="cov0" title="0">{
+                                return time.Time{}, errors.New("GeneralizedTime contains invalid integer: " + err.Error())
+                        }</span>
+
+                        <span class="cov8" title="1">tz = time.FixedZone("", -1*(tzHour*3600+tzMin*60))
+                        bytes = bytes[5:]</span>
+                }
+        } else<span class="cov8" title="1"> {
+                tz = time.UTC
+        }</span>
+
+        <span class="cov8" title="1">if len(bytes) &gt; 0 </span><span class="cov8" title="1">{
+                return time.Time{}, errors.New("GeneralizedTime has trailing garbage")
+        }</span>
+
+        <span class="cov8" title="1">return time.Date(year, time.Month(month), day, hour, min, sec, ms*1000*1000, tz), nil</span>
+}
+
+func decodeASN1Time(value *asn1.RawValue) (time.Time, error) <span class="cov0" title="0">{
+        if !value.IsCompound &amp;&amp; value.Class == 0 </span><span class="cov0" title="0">{
+                if value.Tag == tagUTCTime </span><span class="cov0" title="0">{
+                        return parseUTCTime(value.Bytes)
+                }</span> else<span class="cov0" title="0"> if value.Tag == tagGeneralizedTime </span><span class="cov0" title="0">{
+                        return parseGeneralizedTime(value.Bytes)
+                }</span>
+        }
+        <span class="cov0" title="0">return time.Time{}, errors.New("Not a time value")</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">// Copyright (C) 2019 Opsmate, Inc.
+//
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// This software is distributed WITHOUT A WARRANTY OF ANY KIND.
+// See the Mozilla Public License for details.
+
+package certspotter
+
+import (
+        "encoding/asn1"
+)
+
+func canonicalizeRDNString(fromStr string) string <span class="cov8" title="1">{
+        from := []byte(fromStr)
+        to := []byte{}
+        inWhitespace := true
+        for _, ch := range from </span><span class="cov8" title="1">{
+                if ch == ' ' || ch == '\f' || ch == '\n' || ch == '\r' || ch == '\t' || ch == '\v' </span><span class="cov8" title="1">{
+                        if !inWhitespace </span><span class="cov8" title="1">{
+                                to = append(to, ' ')
+                        }</span>
+                        <span class="cov8" title="1">inWhitespace = true</span>
+                } else<span class="cov8" title="1"> {
+                        if ch &gt;= 'A' &amp;&amp; ch &lt;= 'Z' </span><span class="cov8" title="1">{
+                                to = append(to, ch+32) // convert to lowercase
+                        }</span> else<span class="cov8" title="1"> {
+                                to = append(to, ch)
+                        }</span>
+                        <span class="cov8" title="1">inWhitespace = false</span>
+                }
+        }
+        <span class="cov8" title="1">if inWhitespace &amp;&amp; len(to) &gt; 0 </span><span class="cov8" title="1">{
+                // whack off the space character that we appended
+                to = to[:len(to)-1]
+        }</span>
+        <span class="cov8" title="1">return string(to)</span>
+}
+
+func shouldCanonicalizeASN1String(value *asn1.RawValue) bool <span class="cov0" title="0">{
+        if !value.IsCompound &amp;&amp; value.Class == 0 </span><span class="cov0" title="0">{
+                return value.Tag == 12 || value.Tag == 19 || value.Tag == 22 || value.Tag == 20 || value.Tag == 26 || value.Tag == 30 || value.Tag == 28
+        }</span>
+        <span class="cov0" title="0">return false</span>
+}
+
+func canonicalizeATV(oldATV AttributeTypeAndValue) (AttributeTypeAndValue, error) <span class="cov0" title="0">{
+        if shouldCanonicalizeASN1String(&amp;oldATV.Value) </span><span class="cov0" title="0">{
+                str, err := decodeASN1String(&amp;oldATV.Value)
+                if err != nil </span><span class="cov0" title="0">{
+                        return AttributeTypeAndValue{}, err
+                }</span>
+                <span class="cov0" title="0">str = canonicalizeRDNString(str)
+                return AttributeTypeAndValue{
+                        Type: oldATV.Type,
+                        Value: asn1.RawValue{
+                                Class:      0,
+                                Tag:        asn1.TagUTF8String,
+                                IsCompound: false,
+                                Bytes:      []byte(str),
+                        },
+                }, nil</span>
+        } else<span class="cov0" title="0"> {
+                return oldATV, nil
+        }</span>
+}
+
+func canonicalizeRDNSet(oldSet RelativeDistinguishedNameSET) (RelativeDistinguishedNameSET, error) <span class="cov0" title="0">{
+        newSet := make([]AttributeTypeAndValue, len(oldSet))
+        for i := range oldSet </span><span class="cov0" title="0">{
+                var err error
+                newSet[i], err = canonicalizeATV(oldSet[i])
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+        }
+        <span class="cov0" title="0">return newSet, nil</span>
+}
+
+func CanonicalizeRDNSequence(oldSequence RDNSequence) (RDNSequence, error) <span class="cov0" title="0">{
+        newSequence := make([]RelativeDistinguishedNameSET, len(oldSequence))
+        for i := range oldSequence </span><span class="cov0" title="0">{
+                var err error
+                newSequence[i], err = canonicalizeRDNSet(oldSequence[i])
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+        }
+        <span class="cov0" title="0">return newSequence, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">// Copyright (C) 2016 Opsmate, Inc.
+//
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// This software is distributed WITHOUT A WARRANTY OF ANY KIND.
+// See the Mozilla Public License for details.
+
+package certspotter
+
+import (
+        "fmt"
+        "math/big"
+
+        "software.sslmate.com/src/certspotter/ct"
+)
+
+func IsPrecert(entry *ct.LogEntry) bool <span class="cov0" title="0">{
+        return entry.Leaf.TimestampedEntry.EntryType == ct.PrecertLogEntryType
+}</span>
+
+type CertInfo struct {
+        TBS *TBSCertificate
+
+        Subject                RDNSequence
+        SubjectParseError      error
+        Issuer                 RDNSequence
+        IssuerParseError       error
+        SANs                   []SubjectAltName
+        SANsParseError         error
+        SerialNumber           *big.Int
+        SerialNumberParseError error
+        Validity               *CertValidity
+        ValidityParseError     error
+        IsCA                   *bool
+        IsCAParseError         error
+        IsPreCert              bool
+}
+
+func MakeCertInfoFromTBS(tbs *TBSCertificate) *CertInfo <span class="cov0" title="0">{
+        info := &amp;CertInfo{TBS: tbs}
+
+        info.Subject, info.SubjectParseError = tbs.ParseSubject()
+        info.Issuer, info.IssuerParseError = tbs.ParseIssuer()
+        info.SANs, info.SANsParseError = tbs.ParseSubjectAltNames()
+        info.SerialNumber, info.SerialNumberParseError = tbs.ParseSerialNumber()
+        info.Validity, info.ValidityParseError = tbs.ParseValidity()
+        info.IsCA, info.IsCAParseError = tbs.ParseBasicConstraints()
+        info.IsPreCert = len(tbs.GetExtension(oidExtensionCTPoison)) &gt; 0
+
+        return info
+}</span>
+
+func MakeCertInfoFromRawTBS(tbsBytes []byte) (*CertInfo, error) <span class="cov0" title="0">{
+        tbs, err := ParseTBSCertificate(tbsBytes)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return MakeCertInfoFromTBS(tbs), nil</span>
+}
+
+func MakeCertInfoFromRawCert(certBytes []byte) (*CertInfo, error) <span class="cov0" title="0">{
+        cert, err := ParseCertificate(certBytes)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">return MakeCertInfoFromRawTBS(cert.GetRawTBSCertificate())</span>
+}
+
+func MakeCertInfoFromLogEntry(entry *ct.LogEntry) (*CertInfo, error) <span class="cov0" title="0">{
+        switch entry.Leaf.TimestampedEntry.EntryType </span>{
+        case ct.X509LogEntryType:<span class="cov0" title="0">
+                return MakeCertInfoFromRawCert(entry.Leaf.TimestampedEntry.X509Entry)</span>
+
+        case ct.PrecertLogEntryType:<span class="cov0" title="0">
+                return MakeCertInfoFromRawTBS(entry.Leaf.TimestampedEntry.PrecertEntry.TBSCertificate)</span>
+
+        default:<span class="cov0" title="0">
+                return nil, fmt.Errorf("MakeCertInfoFromCTEntry: unknown CT entry type (neither X509 nor precert)")</span>
+        }
+}
+
+func MatchesWildcard(dnsName string, pattern string) bool <span class="cov8" title="1">{
+        for len(pattern) &gt; 0 </span><span class="cov8" title="1">{
+                if pattern[0] == '*' </span><span class="cov8" title="1">{
+                        if len(dnsName) &gt; 0 &amp;&amp; dnsName[0] != '.' &amp;&amp; MatchesWildcard(dnsName[1:], pattern) </span><span class="cov8" title="1">{
+                                return true
+                        }</span>
+                        <span class="cov8" title="1">pattern = pattern[1:]</span>
+                } else<span class="cov8" title="1"> {
+                        if len(dnsName) == 0 || pattern[0] != dnsName[0] </span><span class="cov8" title="1">{
+                                return false
+                        }</span>
+                        <span class="cov8" title="1">pattern = pattern[1:]
+                        dnsName = dnsName[1:]</span>
+                }
+        }
+        <span class="cov8" title="1">return len(dnsName) == 0</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">// Copyright (C) 2016 Opsmate, Inc.
+//
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// This software is distributed WITHOUT A WARRANTY OF ANY KIND.
+// See the Mozilla Public License for details.
+
+package certspotter
+
+import (
+        "bytes"
+        "golang.org/x/net/idna"
+        "net"
+        "strings"
+        "unicode/utf8"
+)
+
+const UnparsableDNSLabelPlaceholder = "&lt;unparsable&gt;"
+
+/*
+const (
+        IdentifierSourceSubjectCN = iota
+        IdentifierSourceDNSName
+        IdentifierSourceIPAddr
+)
+type IdentifierSource int
+
+type UnknownIdentifier struct {
+        Source                        IdentifierSource
+        Value                        []byte
+}
+*/
+
+type Identifiers struct {
+        DNSNames []string // stored as ASCII, with IDNs in Punycode
+        IPAddrs  []net.IP
+        //Unknowns                []UnknownIdentifier
+}
+
+func NewIdentifiers() *Identifiers <span class="cov0" title="0">{
+        return &amp;Identifiers{
+                DNSNames: []string{},
+                IPAddrs:  []net.IP{},
+                //Unknowns:        []UnknownIdentifier{},
+        }
+}</span>
+
+func parseIPAddrString(str string) net.IP <span class="cov0" title="0">{
+        return net.ParseIP(str)
+}</span>
+
+func isASCIIString(value []byte) bool <span class="cov0" title="0">{
+        for _, b := range value </span><span class="cov0" title="0">{
+                if b &gt; 127 </span><span class="cov0" title="0">{
+                        return false
+                }</span>
+        }
+        <span class="cov0" title="0">return true</span>
+}
+func isUTF8String(value []byte) bool <span class="cov0" title="0">{
+        return utf8.Valid(value)
+}</span>
+func latin1ToUTF8(value []byte) string <span class="cov0" title="0">{
+        runes := make([]rune, len(value))
+        for i, b := range value </span><span class="cov0" title="0">{
+                runes[i] = rune(b)
+        }</span>
+        <span class="cov0" title="0">return string(runes)</span>
+}
+
+// Make sure the DNS label doesn't have any weird characters that
+// could cause trouble during later processing.
+func isSaneDNSLabelChar(ch rune) bool <span class="cov0" title="0">{
+        return ch == '\t' || (ch &gt;= 32 &amp;&amp; ch &lt;= 126)
+}</span>
+func isSaneDNSLabel(label string) bool <span class="cov0" title="0">{
+        for _, ch := range label </span><span class="cov0" title="0">{
+                if !isSaneDNSLabelChar(ch) </span><span class="cov0" title="0">{
+                        return false
+                }</span>
+        }
+        <span class="cov0" title="0">return true</span>
+}
+
+func trimHttpPrefixString(value string) string <span class="cov0" title="0">{
+        if strings.HasPrefix(value, "http://") </span><span class="cov0" title="0">{
+                return value[7:]
+        }</span> else<span class="cov0" title="0"> if strings.HasPrefix(value, "https://") </span><span class="cov0" title="0">{
+                return value[8:]
+        }</span> else<span class="cov0" title="0"> {
+                return value
+        }</span>
+}
+
+func trimHttpPrefixBytes(value []byte) []byte <span class="cov0" title="0">{
+        if bytes.HasPrefix(value, []byte("http://")) </span><span class="cov0" title="0">{
+                return value[7:]
+        }</span> else<span class="cov0" title="0"> if bytes.HasPrefix(value, []byte("https://")) </span><span class="cov0" title="0">{
+                return value[8:]
+        }</span> else<span class="cov0" title="0"> {
+                return value
+        }</span>
+}
+
+func trimTrailingDots(value string) string <span class="cov0" title="0">{
+        length := len(value)
+        for length &gt; 0 &amp;&amp; value[length-1] == '.' </span><span class="cov0" title="0">{
+                length--
+        }</span>
+        <span class="cov0" title="0">return value[0:length]</span>
+}
+
+// Try to canonicalize/sanitize the DNS name:
+//  1. Trim leading and trailing whitespace
+//  2. Trim trailing dots
+//  3. Convert to lower case
+//  4. Replace totally nonsensical labels (e.g. having non-printable characters) with a placeholder
+func sanitizeDNSName(value string) string <span class="cov0" title="0">{
+        value = strings.ToLower(trimTrailingDots(strings.TrimSpace(value)))
+        labels := strings.Split(value, ".")
+        for i, label := range labels </span><span class="cov0" title="0">{
+                if !isSaneDNSLabel(label) </span><span class="cov0" title="0">{
+                        labels[i] = UnparsableDNSLabelPlaceholder
+                }</span>
+        }
+        <span class="cov0" title="0">return strings.Join(labels, ".")</span>
+}
+
+// Like sanitizeDNSName, but labels that are Unicode are converted to Punycode.
+func sanitizeUnicodeDNSName(value string) string <span class="cov0" title="0">{
+        value = strings.ToLower(trimTrailingDots(strings.TrimSpace(value)))
+        labels := strings.Split(value, ".")
+        for i, label := range labels </span><span class="cov0" title="0">{
+                if asciiLabel, err := idna.ToASCII(label); err == nil &amp;&amp; isSaneDNSLabel(asciiLabel) </span><span class="cov0" title="0">{
+                        labels[i] = asciiLabel
+                }</span> else<span class="cov0" title="0"> {
+                        labels[i] = UnparsableDNSLabelPlaceholder
+                }</span>
+        }
+        <span class="cov0" title="0">return strings.Join(labels, ".")</span>
+}
+
+func (ids *Identifiers) appendDNSName(dnsName string) <span class="cov0" title="0">{
+        if dnsName != "" &amp;&amp; !ids.hasDNSName(dnsName) </span><span class="cov0" title="0">{
+                ids.DNSNames = append(ids.DNSNames, dnsName)
+        }</span>
+}
+func (ids *Identifiers) appendIPAddress(ipaddr net.IP) <span class="cov0" title="0">{
+        if !ids.hasIPAddress(ipaddr) </span><span class="cov0" title="0">{
+                ids.IPAddrs = append(ids.IPAddrs, ipaddr)
+        }</span>
+}
+
+func (ids *Identifiers) hasDNSName(target string) bool <span class="cov0" title="0">{
+        for _, value := range ids.DNSNames </span><span class="cov0" title="0">{
+                if value == target </span><span class="cov0" title="0">{
+                        return true
+                }</span>
+        }
+        <span class="cov0" title="0">return false</span>
+}
+func (ids *Identifiers) hasIPAddress(target net.IP) bool <span class="cov0" title="0">{
+        for _, value := range ids.IPAddrs </span><span class="cov0" title="0">{
+                if value.Equal(target) </span><span class="cov0" title="0">{
+                        return true
+                }</span>
+        }
+        <span class="cov0" title="0">return false</span>
+}
+
+func (ids *Identifiers) addDnsSANfinal(value []byte) <span class="cov0" title="0">{
+        if ipaddr := parseIPAddrString(string(value)); ipaddr != nil </span><span class="cov0" title="0">{
+                // Stupid CAs put IP addresses in DNS SANs because stupid Microsoft
+                // used to not support IP address SANs.  Since there's no way for an IP
+                // address to also be a valid DNS name, just treat it like an IP address
+                // and not try to process it as a DNS name.
+                ids.appendIPAddress(ipaddr)
+        }</span> else<span class="cov0" title="0"> if isASCIIString(value) </span><span class="cov0" title="0">{
+                ids.appendDNSName(sanitizeDNSName(string(value)))
+        }</span> else<span class="cov0" title="0"> {
+                // DNS SANs are supposed to be IA5Strings (i.e. ASCII) but CAs can't follow
+                // simple rules.  Unfortunately, we have no idea what the encoding really is
+                // in this case, so interpret it as both UTF-8 (if it's valid UTF-8)
+                // and Latin-1.
+                if isUTF8String(value) </span><span class="cov0" title="0">{
+                        ids.appendDNSName(sanitizeUnicodeDNSName(string(value)))
+                }</span>
+                <span class="cov0" title="0">ids.appendDNSName(sanitizeUnicodeDNSName(latin1ToUTF8(value)))</span>
+        }
+}
+
+func (ids *Identifiers) addDnsSANnonull(value []byte) <span class="cov0" title="0">{
+        if slashIndex := bytes.IndexByte(value, '/'); slashIndex != -1 </span><span class="cov0" title="0">{
+                // If the value contains a slash, then this might be a URL,
+                // so process the part of the value up to the first slash,
+                // which should be the domain.  Even though no client should
+                // ever successfully validate such a DNS name, the domain owner
+                // might still want to know about it.
+                ids.addDnsSANfinal(value[0:slashIndex])
+        }</span>
+        <span class="cov0" title="0">ids.addDnsSANfinal(value)</span>
+}
+
+func (ids *Identifiers) AddDnsSAN(value []byte) <span class="cov0" title="0">{
+        // Trim http:// and https:// prefixes, which are all too common in the wild,
+        // so http://example.com becomes just example.com.  Even though clients
+        // should never successfully validate a DNS name like http://example.com,
+        // the owner of example.com might still want to know about it.
+        value = trimHttpPrefixBytes(value)
+
+        if nullIndex := bytes.IndexByte(value, 0); nullIndex != -1 </span><span class="cov0" title="0">{
+                // If the value contains a null byte, process the part of
+                // the value up to the first null byte in addition to the
+                // complete value, in case this certificate is an attempt to
+                // fake out validators that only compare up to the first null.
+                ids.addDnsSANnonull(value[0:nullIndex])
+        }</span>
+        <span class="cov0" title="0">ids.addDnsSANnonull(value)</span>
+}
+
+func (ids *Identifiers) addCNfinal(value string) <span class="cov0" title="0">{
+        if ipaddr := parseIPAddrString(value); ipaddr != nil </span><span class="cov0" title="0">{
+                ids.appendIPAddress(ipaddr)
+        }</span> else<span class="cov0" title="0"> if !strings.ContainsRune(value, ' ') </span><span class="cov0" title="0">{
+                // If the CN contains a space it's clearly not a DNS name, so ignore it.
+                ids.appendDNSName(sanitizeUnicodeDNSName(value))
+        }</span>
+}
+
+func (ids *Identifiers) addCNnonull(value string) <span class="cov0" title="0">{
+        if slashIndex := strings.IndexRune(value, '/'); slashIndex != -1 </span><span class="cov0" title="0">{
+                // If the value contains a slash, then this might be a URL,
+                // so process the part of the value up to the first slash,
+                // which should be the domain.  Even though no client should
+                // ever successfully validate such a DNS name, the domain owner
+                // might still want to know about it.
+                ids.addCNfinal(value[0:slashIndex])
+        }</span>
+        <span class="cov0" title="0">ids.addCNfinal(value)</span>
+}
+
+func (ids *Identifiers) AddCN(value string) <span class="cov0" title="0">{
+        // Trim http:// and https:// prefixes, which are all too common in the wild,
+        // so http://example.com becomes just example.com.  Even though clients
+        // should never successfully validate a DNS name like http://example.com,
+        // the owner of example.com might still want to know about it.
+        value = trimHttpPrefixString(value)
+
+        if nullIndex := strings.IndexRune(value, 0); nullIndex != -1 </span><span class="cov0" title="0">{
+                // If the value contains a null byte, process the part of
+                // the value up to the first null byte in addition to the
+                // complete value, in case this certificate is an attempt to
+                // fake out validators that only compare up to the first null.
+                ids.addCNnonull(value[0:nullIndex])
+        }</span>
+        <span class="cov0" title="0">ids.addCNnonull(value)</span>
+}
+
+func (ids *Identifiers) AddIPAddress(value net.IP) <span class="cov0" title="0">{
+        ids.appendIPAddress(value)
+}</span>
+
+func (ids *Identifiers) dnsNamesString(sep string) string <span class="cov0" title="0">{
+        return strings.Join(ids.DNSNames, sep)
+}</span>
+
+func (ids *Identifiers) ipAddrsString(sep string) string <span class="cov0" title="0">{
+        str := ""
+        for _, ipAddr := range ids.IPAddrs </span><span class="cov0" title="0">{
+                if str != "" </span><span class="cov0" title="0">{
+                        str += sep
+                }</span>
+                <span class="cov0" title="0">str += ipAddr.String()</span>
+        }
+        <span class="cov0" title="0">return str</span>
+}
+
+func (cert *CertInfo) ParseIdentifiers() (*Identifiers, error) <span class="cov0" title="0">{
+        ids := NewIdentifiers()
+
+        if cert.SubjectParseError != nil </span><span class="cov0" title="0">{
+                return nil, cert.SubjectParseError
+        }</span>
+        <span class="cov0" title="0">cns, err := cert.Subject.ParseCNs()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">for _, cn := range cns </span><span class="cov0" title="0">{
+                ids.AddCN(cn)
+        }</span>
+
+        <span class="cov0" title="0">if cert.SANsParseError != nil </span><span class="cov0" title="0">{
+                return nil, cert.SANsParseError
+        }</span>
+        <span class="cov0" title="0">for _, san := range cert.SANs </span><span class="cov0" title="0">{
+                switch san.Type </span>{
+                case sanDNSName:<span class="cov0" title="0">
+                        ids.AddDnsSAN(san.Value)</span>
+                case sanIPAddress:<span class="cov0" title="0">
+                        if len(san.Value) == 4 || len(san.Value) == 16 </span><span class="cov0" title="0">{
+                                ids.AddIPAddress(net.IP(san.Value))
+                        }</span>
+                        // TODO: decide what to do with IP addresses with an invalid length.
+                        // The two encoding errors I've observed in CT logs are:
+                        //  1. encoding the IP address as a string
+                        //  2. a value of 0x00000000FFFFFF00 (WTF?)
+                        // IP addresses aren't a high priority so just ignore invalid ones for now.
+                        // Hopefully no clients out there are dumb enough to process IP address
+                        // SANs encoded as strings...
+                }
+        }
+
+        <span class="cov0" title="0">return ids, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">// Copyright (C) 2016 Opsmate, Inc.
+//
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// This software is distributed WITHOUT A WARRANTY OF ANY KIND.
+// See the Mozilla Public License for details.
+
+package certspotter
+
+import (
+        "bytes"
+        "encoding/asn1"
+        "errors"
+        "fmt"
+)
+
+func bitStringEqual(a, b *asn1.BitString) bool <span class="cov0" title="0">{
+        return a.BitLength == b.BitLength &amp;&amp; bytes.Equal(a.Bytes, b.Bytes)
+}</span>
+
+var (
+        oidExtensionAuthorityKeyId = []int{2, 5, 29, 35}
+        oidExtensionSCT            = []int{1, 3, 6, 1, 4, 1, 11129, 2, 4, 2}
+        oidExtensionCTPoison       = []int{1, 3, 6, 1, 4, 1, 11129, 2, 4, 3}
+)
+
+type PrecertInfo struct {
+        SameIssuer bool   // The pre-certificate was issued from the same CA as the final certificate
+        Issuer     []byte // The pre-certificate's issuer, if different from the final certificate
+        AKI        []byte // The pre-certificate's AKI, if present and different from the final certificate
+}
+
+func ValidatePrecert(precertBytes []byte, tbsBytes []byte) (*PrecertInfo, error) <span class="cov0" title="0">{
+        precert, err := ParseCertificate(precertBytes)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse pre-certificate: " + err.Error())
+        }</span>
+        <span class="cov0" title="0">precertTBS, err := precert.ParseTBSCertificate()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse pre-certificate TBS: " + err.Error())
+        }</span>
+        <span class="cov0" title="0">tbs, err := ParseTBSCertificate(tbsBytes)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse TBS: " + err.Error())
+        }</span>
+
+        // Everything must be equal except:
+        //  issuer
+        //  Authority Key Identifier extension (both must have it OR neither can have it)
+        //  CT poison extension (precert must have it, TBS must not have it)
+        <span class="cov0" title="0">if precertTBS.Version != tbs.Version </span><span class="cov0" title="0">{
+                return nil, errors.New("version not equal")
+        }</span>
+        <span class="cov0" title="0">if !bytes.Equal(precertTBS.SerialNumber.FullBytes, tbs.SerialNumber.FullBytes) </span><span class="cov0" title="0">{
+                return nil, errors.New("serial number not equal")
+        }</span>
+        <span class="cov0" title="0">sameIssuer := bytes.Equal(precertTBS.Issuer.FullBytes, tbs.Issuer.FullBytes)
+        if !bytes.Equal(precertTBS.SignatureAlgorithm.FullBytes, tbs.SignatureAlgorithm.FullBytes) </span><span class="cov0" title="0">{
+                return nil, errors.New("SignatureAlgorithm not equal")
+        }</span>
+        <span class="cov0" title="0">if !bytes.Equal(precertTBS.Validity.FullBytes, tbs.Validity.FullBytes) </span><span class="cov0" title="0">{
+                return nil, errors.New("Validity not equal")
+        }</span>
+        <span class="cov0" title="0">if !bytes.Equal(precertTBS.Subject.FullBytes, tbs.Subject.FullBytes) </span><span class="cov0" title="0">{
+                return nil, errors.New("Subject not equal")
+        }</span>
+        <span class="cov0" title="0">if !bytes.Equal(precertTBS.PublicKey.FullBytes, tbs.PublicKey.FullBytes) </span><span class="cov0" title="0">{
+                return nil, errors.New("PublicKey not equal")
+        }</span>
+        <span class="cov0" title="0">if !bitStringEqual(&amp;precertTBS.UniqueId, &amp;tbs.UniqueId) </span><span class="cov0" title="0">{
+                return nil, errors.New("UniqueId not equal")
+        }</span>
+        <span class="cov0" title="0">if !bitStringEqual(&amp;precertTBS.SubjectUniqueId, &amp;tbs.SubjectUniqueId) </span><span class="cov0" title="0">{
+                return nil, errors.New("SubjectUniqueId not equal")
+        }</span>
+
+        <span class="cov0" title="0">precertHasPoison := false
+        tbsIndex := 0
+        var aki []byte
+        for precertIndex := range precertTBS.Extensions </span><span class="cov0" title="0">{
+                precertExt := &amp;precertTBS.Extensions[precertIndex]
+
+                if precertExt.Id.Equal(oidExtensionCTPoison) </span><span class="cov0" title="0">{
+                        if !precertExt.Critical </span><span class="cov0" title="0">{
+                                return nil, errors.New("pre-cert poison extension is not critical")
+                        }</span>
+                        /* CAs can't even get this right, and Google's logs don't check.  Fortunately,
+                           it's not that important.
+                        if !bytes.Equal(precertExt.Value, []byte{0x05, 0x00}) {
+                                return errors.New("pre-cert poison extension contains incorrect value")
+                        }
+                        */
+                        <span class="cov0" title="0">precertHasPoison = true
+                        continue</span>
+                }
+
+                <span class="cov0" title="0">if tbsIndex &gt;= len(tbs.Extensions) </span><span class="cov0" title="0">{
+                        return nil, errors.New("pre-cert contains extension not in TBS")
+                }</span>
+                <span class="cov0" title="0">tbsExt := &amp;tbs.Extensions[tbsIndex]
+
+                if !precertExt.Id.Equal(tbsExt.Id) </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("pre-cert and TBS contain different extensions (%v vs %v)", precertExt.Id, tbsExt.Id)
+                }</span>
+                <span class="cov0" title="0">if precertExt.Critical != tbsExt.Critical </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("pre-cert and TBS %v extension differs in criticality", precertExt.Id)
+                }</span>
+                <span class="cov0" title="0">if !sameIssuer &amp;&amp; precertExt.Id.Equal(oidExtensionAuthorityKeyId) </span><span class="cov0" title="0">{
+                        aki = precertExt.Value
+                }</span> else<span class="cov0" title="0"> {
+                        if !bytes.Equal(precertExt.Value, tbsExt.Value) </span><span class="cov0" title="0">{
+                                return nil, fmt.Errorf("pre-cert and TBS %v extension differs in value", precertExt.Id)
+                        }</span>
+                }
+
+                <span class="cov0" title="0">tbsIndex++</span>
+        }
+        <span class="cov0" title="0">if tbsIndex &lt; len(tbs.Extensions) </span><span class="cov0" title="0">{
+                return nil, errors.New("TBS contains extension not in pre-cert")
+        }</span>
+        <span class="cov0" title="0">if !precertHasPoison </span><span class="cov0" title="0">{
+                return nil, errors.New("pre-cert does not have poison extension")
+        }</span>
+
+        <span class="cov0" title="0">return &amp;PrecertInfo{SameIssuer: sameIssuer, Issuer: precertTBS.Issuer.FullBytes, AKI: aki}, nil</span>
+}
+func ReconstructPrecertTBS(tbs *TBSCertificate) (*TBSCertificate, error) <span class="cov0" title="0">{
+        precertTBS := TBSCertificate{
+                Version:            tbs.Version,
+                SerialNumber:       tbs.SerialNumber,
+                SignatureAlgorithm: tbs.SignatureAlgorithm,
+                Issuer:             tbs.Issuer,
+                Validity:           tbs.Validity,
+                Subject:            tbs.Subject,
+                PublicKey:          tbs.PublicKey,
+                UniqueId:           tbs.UniqueId,
+                SubjectUniqueId:    tbs.SubjectUniqueId,
+                Extensions:         make([]Extension, 0, len(tbs.Extensions)),
+        }
+
+        for _, ext := range tbs.Extensions </span><span class="cov0" title="0">{
+                switch </span>{
+                case ext.Id.Equal(oidExtensionSCT):<span class="cov0" title="0"></span>
+                default:<span class="cov0" title="0">
+                        precertTBS.Extensions = append(precertTBS.Extensions, ext)</span>
+                }
+        }
+
+        <span class="cov0" title="0">var err error
+        precertTBS.Raw, err = asn1.Marshal(precertTBS)
+        return &amp;precertTBS, err</span>
+}
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">// Copyright (C) 2017 Opsmate, Inc.
+//
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// This software is distributed WITHOUT A WARRANTY OF ANY KIND.
+// See the Mozilla Public License for details.
+
+package certspotter
+
+import (
+        "software.sslmate.com/src/certspotter/ct"
+)
+
+func VerifyX509SCT(sct *ct.SignedCertificateTimestamp, cert []byte, verify *ct.SignatureVerifier) error <span class="cov0" title="0">{
+        entry := ct.LogEntry{
+                Leaf: ct.MerkleTreeLeaf{
+                        Version:  0,
+                        LeafType: ct.TimestampedEntryLeafType,
+                        TimestampedEntry: ct.TimestampedEntry{
+                                Timestamp:  sct.Timestamp,
+                                EntryType:  ct.X509LogEntryType,
+                                X509Entry:  cert,
+                                Extensions: sct.Extensions,
+                        },
+                },
+        }
+        return verify.VerifySCTSignature(*sct, entry)
+}</span>
+
+func VerifyPrecertSCT(sct *ct.SignedCertificateTimestamp, precert ct.PreCert, verify *ct.SignatureVerifier) error <span class="cov0" title="0">{
+        entry := ct.LogEntry{
+                Leaf: ct.MerkleTreeLeaf{
+                        Version:  0,
+                        LeafType: ct.TimestampedEntryLeafType,
+                        TimestampedEntry: ct.TimestampedEntry{
+                                Timestamp:    sct.Timestamp,
+                                EntryType:    ct.PrecertLogEntryType,
+                                PrecertEntry: precert,
+                                Extensions:   sct.Extensions,
+                        },
+                },
+        }
+        return verify.VerifySCTSignature(*sct, entry)
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">// Copyright (C) 2016 Opsmate, Inc.
+//
+// This Source Code Form is subject to the terms of the Mozilla
+// Public License, v. 2.0. If a copy of the MPL was not distributed
+// with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+// This software is distributed WITHOUT A WARRANTY OF ANY KIND.
+// See the Mozilla Public License for details.
+
+package certspotter
+
+import (
+        "bytes"
+        "crypto/x509/pkix"
+        "encoding/asn1"
+        "errors"
+        "fmt"
+        "math/big"
+        "net"
+        "time"
+)
+
+var (
+        oidExtensionSubjectAltName   = asn1.ObjectIdentifier{2, 5, 29, 17}
+        oidExtensionBasicConstraints = asn1.ObjectIdentifier{2, 5, 29, 19}
+        oidCountry                   = asn1.ObjectIdentifier{2, 5, 4, 6}
+        oidOrganization              = asn1.ObjectIdentifier{2, 5, 4, 10}
+        oidOrganizationalUnit        = asn1.ObjectIdentifier{2, 5, 4, 11}
+        oidCommonName                = asn1.ObjectIdentifier{2, 5, 4, 3}
+        oidSerialNumber              = asn1.ObjectIdentifier{2, 5, 4, 5}
+        oidLocality                  = asn1.ObjectIdentifier{2, 5, 4, 7}
+        oidProvince                  = asn1.ObjectIdentifier{2, 5, 4, 8}
+        oidStreetAddress             = asn1.ObjectIdentifier{2, 5, 4, 9}
+        oidPostalCode                = asn1.ObjectIdentifier{2, 5, 4, 17}
+)
+
+type CertValidity struct {
+        NotBefore time.Time
+        NotAfter  time.Time
+}
+
+type basicConstraints struct {
+        IsCA       bool `asn1:"optional"`
+        MaxPathLen int  `asn1:"optional,default:-1"`
+}
+
+type Extension struct {
+        Id       asn1.ObjectIdentifier
+        Critical bool `asn1:"optional"`
+        Value    []byte
+}
+
+const (
+        sanOtherName     = 0
+        sanRfc822Name    = 1
+        sanDNSName       = 2
+        sanX400Address   = 3
+        sanDirectoryName = 4
+        sanEdiPartyName  = 5
+        sanURI           = 6
+        sanIPAddress     = 7
+        sanRegisteredID  = 8
+)
+
+type SubjectAltName struct {
+        Type  int
+        Value []byte
+}
+
+type RDNSequence []RelativeDistinguishedNameSET
+type RelativeDistinguishedNameSET []AttributeTypeAndValue
+type AttributeTypeAndValue struct {
+        Type  asn1.ObjectIdentifier
+        Value asn1.RawValue
+}
+
+func ParseRDNSequence(rdnsBytes []byte) (RDNSequence, error) <span class="cov0" title="0">{
+        var rdns RDNSequence
+        if rest, err := asn1.Unmarshal(rdnsBytes, &amp;rdns); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse RDNSequence: " + err.Error())
+        }</span> else<span class="cov0" title="0"> if len(rest) != 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("trailing data after RDNSequence: %v", rest) // XXX: too strict?
+        }</span>
+        <span class="cov0" title="0">return rdns, nil</span>
+}
+
+func MarshalRDNSequence(rdns RDNSequence) ([]byte, error) <span class="cov0" title="0">{
+        return asn1.Marshal(rdns)
+}</span>
+
+type TBSCertificate struct {
+        Raw asn1.RawContent
+
+        Version            int `asn1:"optional,explicit,default:1,tag:0"`
+        SerialNumber       asn1.RawValue
+        SignatureAlgorithm asn1.RawValue
+        Issuer             asn1.RawValue
+        Validity           asn1.RawValue
+        Subject            asn1.RawValue
+        PublicKey          asn1.RawValue
+        UniqueId           asn1.BitString `asn1:"optional,tag:1"`
+        SubjectUniqueId    asn1.BitString `asn1:"optional,tag:2"`
+        Extensions         []Extension    `asn1:"optional,explicit,tag:3"`
+}
+
+type Certificate struct {
+        Raw asn1.RawContent
+
+        TBSCertificate     asn1.RawValue
+        SignatureAlgorithm asn1.RawValue
+        SignatureValue     asn1.RawValue
+}
+
+func (rdns RDNSequence) ParseCNs() ([]string, error) <span class="cov0" title="0">{
+        var cns []string
+
+        for _, rdn := range rdns </span><span class="cov0" title="0">{
+                if len(rdn) == 0 </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov0" title="0">atv := rdn[0]
+                if atv.Type.Equal(oidCommonName) </span><span class="cov0" title="0">{
+                        cnString, err := decodeASN1String(&amp;atv.Value)
+                        if err != nil </span><span class="cov0" title="0">{
+                                return nil, errors.New("Error decoding CN: " + err.Error())
+                        }</span>
+                        <span class="cov0" title="0">cns = append(cns, cnString)</span>
+                }
+        }
+
+        <span class="cov0" title="0">return cns, nil</span>
+}
+
+func rdnLabel(oid asn1.ObjectIdentifier) string <span class="cov0" title="0">{
+        switch </span>{
+        case oid.Equal(oidCountry):<span class="cov0" title="0">
+                return "C"</span>
+        case oid.Equal(oidOrganization):<span class="cov0" title="0">
+                return "O"</span>
+        case oid.Equal(oidOrganizationalUnit):<span class="cov0" title="0">
+                return "OU"</span>
+        case oid.Equal(oidCommonName):<span class="cov0" title="0">
+                return "CN"</span>
+        case oid.Equal(oidSerialNumber):<span class="cov0" title="0">
+                return "serialNumber"</span>
+        case oid.Equal(oidLocality):<span class="cov0" title="0">
+                return "L"</span>
+        case oid.Equal(oidProvince):<span class="cov0" title="0">
+                return "ST"</span>
+        case oid.Equal(oidStreetAddress):<span class="cov0" title="0">
+                return "street"</span>
+        case oid.Equal(oidPostalCode):<span class="cov0" title="0">
+                return "postalCode"</span>
+        }
+        <span class="cov0" title="0">return oid.String()</span>
+}
+
+func (rdns RDNSequence) String() string <span class="cov0" title="0">{
+        var buf bytes.Buffer
+
+        for _, rdn := range rdns </span><span class="cov0" title="0">{
+                if len(rdn) == 0 </span><span class="cov0" title="0">{
+                        continue</span>
+                }
+                <span class="cov0" title="0">atv := rdn[0]
+
+                if buf.Len() != 0 </span><span class="cov0" title="0">{
+                        buf.WriteString(", ")
+                }</span>
+                <span class="cov0" title="0">buf.WriteString(rdnLabel(atv.Type))
+                buf.WriteString("=")
+                valueString, err := decodeASN1String(&amp;atv.Value)
+                if err == nil </span><span class="cov0" title="0">{
+                        buf.WriteString(valueString) // TODO: escape non-printable characters, '\', and ','
+                }</span> else<span class="cov0" title="0"> {
+                        fmt.Fprintf(&amp;buf, "%v", atv.Value.FullBytes)
+                }</span>
+        }
+
+        <span class="cov0" title="0">return buf.String()</span>
+}
+
+func (san SubjectAltName) String() string <span class="cov0" title="0">{
+        switch san.Type </span>{
+        case sanDNSName:<span class="cov0" title="0">
+                return "DNS:" + string(san.Value)</span> // TODO: escape non-printable characters, '\', and ','
+        case sanIPAddress:<span class="cov0" title="0">
+                if len(san.Value) == 4 || len(san.Value) == 16 </span><span class="cov0" title="0">{
+                        return "IP:" + net.IP(san.Value).String()
+                }</span> else<span class="cov0" title="0"> {
+                        return fmt.Sprintf("IP:%v", san.Value)
+                }</span>
+        default:<span class="cov0" title="0">
+                // TODO: support other types of SANs
+                return fmt.Sprintf("%d:%v", san.Type, san.Value)</span>
+        }
+}
+
+func ParseTBSCertificate(tbsBytes []byte) (*TBSCertificate, error) <span class="cov0" title="0">{
+        var tbs TBSCertificate
+        if rest, err := asn1.Unmarshal(tbsBytes, &amp;tbs); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse TBS: " + err.Error())
+        }</span> else<span class="cov0" title="0"> if len(rest) &gt; 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("trailing data after TBS: %v", rest) // XXX: too strict?
+        }</span>
+        <span class="cov0" title="0">return &amp;tbs, nil</span>
+}
+
+func (tbs *TBSCertificate) ParseValidity() (*CertValidity, error) <span class="cov0" title="0">{
+        var rawValidity struct {
+                NotBefore asn1.RawValue
+                NotAfter  asn1.RawValue
+        }
+        if rest, err := asn1.Unmarshal(tbs.Validity.FullBytes, &amp;rawValidity); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse validity: " + err.Error())
+        }</span> else<span class="cov0" title="0"> if len(rest) &gt; 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("trailing data after validity: %v", rest)
+        }</span>
+
+        <span class="cov0" title="0">var validity CertValidity
+        var err error
+        if validity.NotBefore, err = decodeASN1Time(&amp;rawValidity.NotBefore); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to decode notBefore time: " + err.Error())
+        }</span>
+        <span class="cov0" title="0">if validity.NotAfter, err = decodeASN1Time(&amp;rawValidity.NotAfter); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to decode notAfter time: " + err.Error())
+        }</span>
+
+        <span class="cov0" title="0">return &amp;validity, nil</span>
+}
+
+func (tbs *TBSCertificate) ParseBasicConstraints() (*bool, error) <span class="cov0" title="0">{
+        isCA := false
+        isNotCA := false
+
+        // Some certs in the wild have multiple BasicConstraints extensions (is there anything
+        // that CAs haven't screwed up???), so we process all of them and only choke if they
+        // are contradictory (which has not been observed...yet).
+        for _, ext := range tbs.GetExtension(oidExtensionBasicConstraints) </span><span class="cov0" title="0">{
+                var constraints basicConstraints
+                if rest, err := asn1.Unmarshal(ext.Value, &amp;constraints); err != nil </span><span class="cov0" title="0">{
+                        return nil, errors.New("failed to parse Basic Constraints: " + err.Error())
+                }</span> else<span class="cov0" title="0"> if len(rest) &gt; 0 </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("trailing data after Basic Constraints: %v", rest)
+                }</span>
+
+                <span class="cov0" title="0">if constraints.IsCA </span><span class="cov0" title="0">{
+                        isCA = true
+                }</span> else<span class="cov0" title="0"> {
+                        isNotCA = true
+                }</span>
+        }
+
+        <span class="cov0" title="0">if !isCA &amp;&amp; !isNotCA </span><span class="cov0" title="0">{
+                return nil, nil
+        }</span> else<span class="cov0" title="0"> if isCA &amp;&amp; !isNotCA </span><span class="cov0" title="0">{
+                trueValue := true
+                return &amp;trueValue, nil
+        }</span> else<span class="cov0" title="0"> if !isCA &amp;&amp; isNotCA </span><span class="cov0" title="0">{
+                falseValue := false
+                return &amp;falseValue, nil
+        }</span> else<span class="cov0" title="0"> {
+                return nil, fmt.Errorf("Certificate has more than one Basic Constraints extension and they are contradictory")
+        }</span>
+}
+
+func (tbs *TBSCertificate) ParseSerialNumber() (*big.Int, error) <span class="cov0" title="0">{
+        serialNumber := big.NewInt(0)
+        if rest, err := asn1.Unmarshal(tbs.SerialNumber.FullBytes, &amp;serialNumber); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse serial number: " + err.Error())
+        }</span> else<span class="cov0" title="0"> if len(rest) &gt; 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("trailing data after serial number: %v", rest)
+        }</span>
+        <span class="cov0" title="0">return serialNumber, nil</span>
+}
+
+func (tbs *TBSCertificate) GetRawPublicKey() []byte <span class="cov0" title="0">{
+        return tbs.PublicKey.FullBytes
+}</span>
+
+func (tbs *TBSCertificate) GetRawSubject() []byte <span class="cov0" title="0">{
+        return tbs.Subject.FullBytes
+}</span>
+
+func (tbs *TBSCertificate) GetRawIssuer() []byte <span class="cov0" title="0">{
+        return tbs.Issuer.FullBytes
+}</span>
+
+func (tbs *TBSCertificate) ParseSubject() (RDNSequence, error) <span class="cov0" title="0">{
+        subject, err := ParseRDNSequence(tbs.GetRawSubject())
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse certificate subject: " + err.Error())
+        }</span>
+        <span class="cov0" title="0">return subject, nil</span>
+}
+
+func (tbs *TBSCertificate) ParseIssuer() (RDNSequence, error) <span class="cov0" title="0">{
+        issuer, err := ParseRDNSequence(tbs.GetRawIssuer())
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse certificate issuer: " + err.Error())
+        }</span>
+        <span class="cov0" title="0">return issuer, nil</span>
+}
+
+func (tbs *TBSCertificate) ParseSubjectCommonNames() ([]string, error) <span class="cov0" title="0">{
+        subject, err := tbs.ParseSubject()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+        <span class="cov0" title="0">cns, err := subject.ParseCNs()
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to process certificate subject: " + err.Error())
+        }</span>
+
+        <span class="cov0" title="0">return cns, nil</span>
+}
+
+func (tbs *TBSCertificate) ParseSubjectAltNames() ([]SubjectAltName, error) <span class="cov0" title="0">{
+        sans := []SubjectAltName{}
+
+        for _, sanExt := range tbs.GetExtension(oidExtensionSubjectAltName) </span><span class="cov0" title="0">{
+                var err error
+                sans, err = ParseSANExtension(sans, sanExt.Value)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, err
+                }</span>
+        }
+
+        <span class="cov0" title="0">return sans, nil</span>
+}
+
+func (tbs *TBSCertificate) GetExtension(id asn1.ObjectIdentifier) []Extension <span class="cov0" title="0">{
+        var exts []Extension
+        for _, ext := range tbs.Extensions </span><span class="cov0" title="0">{
+                if ext.Id.Equal(id) </span><span class="cov0" title="0">{
+                        exts = append(exts, ext)
+                }</span>
+        }
+        <span class="cov0" title="0">return exts</span>
+}
+
+func ParseCertificate(certBytes []byte) (*Certificate, error) <span class="cov0" title="0">{
+        var cert Certificate
+        if rest, err := asn1.Unmarshal(certBytes, &amp;cert); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse certificate: " + err.Error())
+        }</span> else<span class="cov0" title="0"> if len(rest) &gt; 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("trailing data after certificate: %v", rest) // XXX: too strict?
+        }</span>
+        <span class="cov0" title="0">return &amp;cert, nil</span>
+}
+
+func (cert *Certificate) GetRawTBSCertificate() []byte <span class="cov0" title="0">{
+        return cert.TBSCertificate.FullBytes
+}</span>
+
+func (cert *Certificate) ParseTBSCertificate() (*TBSCertificate, error) <span class="cov0" title="0">{
+        return ParseTBSCertificate(cert.GetRawTBSCertificate())
+}</span>
+
+func (cert *Certificate) ParseSignatureAlgorithm() (*pkix.AlgorithmIdentifier, error) <span class="cov0" title="0">{
+        signatureAlgorithm := new(pkix.AlgorithmIdentifier)
+        if rest, err := asn1.Unmarshal(cert.SignatureAlgorithm.FullBytes, signatureAlgorithm); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse signature algorithm: " + err.Error())
+        }</span> else<span class="cov0" title="0"> if len(rest) &gt; 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("trailing data after signature algorithm: %v", rest)
+        }</span>
+        <span class="cov0" title="0">return signatureAlgorithm, nil</span>
+}
+
+func (cert *Certificate) ParseSignatureValue() ([]byte, error) <span class="cov0" title="0">{
+        var signatureValue asn1.BitString
+        if rest, err := asn1.Unmarshal(cert.SignatureValue.FullBytes, &amp;signatureValue); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse signature value: " + err.Error())
+        }</span> else<span class="cov0" title="0"> if len(rest) &gt; 0 </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("trailing data after signature value: %v", rest)
+        }</span>
+        <span class="cov0" title="0">return signatureValue.RightAlign(), nil</span>
+}
+
+func ParseSANExtension(sans []SubjectAltName, value []byte) ([]SubjectAltName, error) <span class="cov0" title="0">{
+        var seq asn1.RawValue
+        if rest, err := asn1.Unmarshal(value, &amp;seq); err != nil </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse subjectAltName extension: " + err.Error())
+        }</span> else<span class="cov0" title="0"> if len(rest) != 0 </span><span class="cov0" title="0">{
+                // Don't complain if the SAN is followed by exactly one zero byte,
+                // which is a common error.
+                if !(len(rest) == 1 &amp;&amp; rest[0] == 0) </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("trailing data in subjectAltName extension: %v", rest) // XXX: too strict?
+                }</span>
+        }
+        <span class="cov0" title="0">if !seq.IsCompound || seq.Tag != 16 || seq.Class != 0 </span><span class="cov0" title="0">{
+                return nil, errors.New("failed to parse subjectAltName extension: bad SAN sequence") // XXX: too strict?
+        }</span>
+
+        <span class="cov0" title="0">rest := seq.Bytes
+        for len(rest) &gt; 0 </span><span class="cov0" title="0">{
+                var val asn1.RawValue
+                var err error
+                rest, err = asn1.Unmarshal(rest, &amp;val)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, errors.New("failed to parse subjectAltName extension item: " + err.Error())
+                }</span>
+                <span class="cov0" title="0">sans = append(sans, SubjectAltName{Type: val.Tag, Value: val.Bytes})</span>
+        }
+
+        <span class="cov0" title="0">return sans, nil</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
